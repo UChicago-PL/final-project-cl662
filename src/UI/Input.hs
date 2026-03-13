@@ -10,6 +10,8 @@ import Data.Char (isSpace)
 
 import Game.Types (Pos)
 
+
+-- Repeatedly asks the user for a board position until they enter a valid one.
 promptPos :: String -> IO Pos
 promptPos msg = do
   putStr msg
@@ -70,6 +72,8 @@ parseMNK raw =
           _ -> Left "could not parse integers"
       _ -> Left "expected three integers"
 
+
+-- Removes one pair of surrounding parentheses from a string if they are present.
 stripParens :: String -> String
 stripParens s =
   case s of
@@ -79,6 +83,8 @@ stripParens s =
 trim :: String -> String
 trim = dropWhileEnd isSpace . dropWhile isSpace
 
+
+--Removes trailing elements from a list as long as they satisfy a given condition.
 dropWhileEnd :: (a -> Bool) -> [a] -> [a]
 dropWhileEnd p = reverse . dropWhile p . reverse
 

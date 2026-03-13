@@ -20,12 +20,16 @@ import UI.Render (render)
 
 data Mode = HvH | HvBot deriving (Eq, Show)
 
+
+-- Starts the program by choosing the game settings and mode, then beginning the first round.
 run :: IO ()
 run = do
   mnk <- chooseMNK
   mode <- chooseMode
   roundLoop 1 mode mnk
 
+
+-- Determines the board size and win condition either from command-line arguments or by prompting the user.
 chooseMNK :: IO (Int, Int, Int)
 chooseMNK = do
   args <- getArgs
@@ -38,6 +42,8 @@ chooseMNK = do
           promptMNK (3,3,3)
     _ -> promptMNK (3,3,3)
 
+
+-- Asks the user whether to play human-vs-human or human-vs-bot.
 chooseMode :: IO Mode
 chooseMode = do
   putStrLn "Mode: 1) Human vs Human   2) Human vs Bot (Bot as P2)"
@@ -48,11 +54,15 @@ chooseMode = do
     "2" -> pure HvBot
     _   -> pure HvH
 
+
+-- Starts a new round by creating a fresh game state with the chosen settings.
 roundLoop :: Int -> Mode -> (Int, Int, Int) -> IO ()
 roundLoop roundNo mode (m,n,k) = do
   let st0 = initState m n k
   gameLoop roundNo mode (m,n,k) st0
 
+
+-- Repeatedly renders the board, checks the game status, and hands control to the correct player until the game ends.
 gameLoop :: Int -> Mode -> (Int, Int, Int) -> GameState -> IO ()
 gameLoop roundNo mode mnk@(m,n,k) st = do
   clearScreenSafe
@@ -100,6 +110,8 @@ gameLoop roundNo mode mnk@(m,n,k) st = do
             Nothing  -> error "Bot produced illegal move (bug)"
             Just st' -> gameLoop roundNo mode mnk st'
 
+
+--
 postGameMenu :: Int -> Mode -> (Int, Int, Int) -> IO ()
 postGameMenu roundNo mode mnk = do
   putStr "\nPlay again? [y = same settings, c = change settings, n = quit]: "
@@ -122,6 +134,7 @@ postGameMenu roundNo mode mnk = do
       putStrLn "Please enter y, c, or n."
       postGameMenu roundNo mode mnk
 
+-- Checks whether a move is in bounds and on an empty cell before applying it.
 validateAndApply :: GameState -> (Int, Int) -> Either String GameState
 validateAndApply st pos = do
   cell <- maybe (Left "Out of bounds.") Right (getCell (gsBoard st) pos)

@@ -19,6 +19,8 @@ data SearchEnv = SearchEnv
   , seNodes :: Int
   }
 
+
+--Chooses the move the AI thinks is best
 bestMove :: SearchConfig -> GameState -> Maybe Pos
 bestMove cfg st =
   case candidateMoves cfg st of
@@ -29,6 +31,7 @@ bestMove cfg st =
           scored = S.evalState (mapM (scoreMove me st) ms) env0
       in Just (fst (argmax snd scored))
 
+--Evaluates a single possible move by applying it and then searching ahead with minimax or alpha-beta pruning.
 scoreMove :: Player -> GameState -> Pos -> State SearchEnv (Pos, Int)
 scoreMove me st mv =
   case applyMove mv st of
@@ -42,6 +45,8 @@ scoreMove me st mv =
       pure (mv, v)
 
 -- Candidate move generation: neighbor-only
+
+--Generates the set of moves the bot is willing to consider (only empty squares near existing pieces).
 candidateMoves :: SearchConfig -> GameState -> [Pos]
 candidateMoves cfg st =
   let b = gsBoard st
@@ -56,6 +61,7 @@ candidateMoves cfg st =
             ms = Set.toList neigh
         in if null ms then empties else ms
 
+-- Collects all board positions that are currently filled.
 occupiedPositions :: Board.Board -> Int -> Int -> [Pos]
 occupiedPositions b rows cols =
   [ (i,j)
@@ -64,6 +70,7 @@ occupiedPositions b rows cols =
   , Board.getCell b (i,j) /= Just Empty
   ]
 
+-- Collects all board positions that are currently empty.
 emptyPositions :: Board.Board -> Int -> Int -> [Pos]
 emptyPositions b rows cols =
   [ (i,j)
@@ -72,6 +79,7 @@ emptyPositions b rows cols =
   , Board.getCell b (i,j) == Just Empty
   ]
 
+-- Finds empty squares that lie within a chosen radius of any occupied square.
 neighborEmptySet :: Int -> Int -> Int -> [Pos] -> [Pos] -> Set.Set Pos
 neighborEmptySet rows cols r occ empties =
   let emptySet = Set.fromList empties
@@ -86,6 +94,7 @@ neighborEmptySet rows cols r occ empties =
       allNeigh = Set.fromList (concatMap neighbors occ)
   in Set.intersection allNeigh emptySet
 
+--Returns the center square or central squares of the board for use when the board is still empty.
 centerCandidates :: Int -> Int -> [Pos]
 centerCandidates rows cols =
   let cr1 = (rows - 1) `div` 2
@@ -97,6 +106,8 @@ centerCandidates rows cols =
 
 -- Minimax Algorithm
 
+-- recursively searches future positions by assuming one side tries to maximize the score 
+-- while the other tries to minimize it.
 minimax :: SearchConfig -> Int -> Player -> GameState -> Bool -> State SearchEnv Int
 minimax cfg depth me st maximizing = do
   mTerm <- terminalMaybe cfg depth me st
@@ -114,6 +125,8 @@ minimax cfg depth me st maximizing = do
                        ) moves0
           pure $ if maximizing then maximum vals else minimum vals
 
+
+--Same search as minimax but skips branches that cannot affect the final decision.
 alphabeta :: SearchConfig -> Int -> Player -> GameState -> Bool -> (Int, Int) -> State SearchEnv Int
 alphabeta cfg depth me st maximizing (alpha0, beta0) = do
   mTerm <- terminalMaybe cfg depth me st
@@ -140,6 +153,7 @@ alphabeta cfg depth me st maximizing (alpha0, beta0) = do
               then pure best'
               else go ms a' b' best'
 
+-- Checks whether search should stop because the game is over, depth is exhausted, or the node limit has been reached.
 terminalMaybe :: SearchConfig -> Int -> Player -> GameState -> State SearchEnv (Maybe Int)
 terminalMaybe cfg depth me st = do
   exceeded <- nodeLimitExceeded cfg
@@ -156,6 +170,7 @@ terminalMaybe cfg depth me st = do
 
 -- Move ordering
 
+-- Reorders candidate moves so stronger-looking ones are searched first.
 orderedMoves :: SearchConfig -> Player -> GameState -> Bool -> State SearchEnv [Pos]
 orderedMoves cfg me st maximizing = do
   let ms = candidateMoves cfg st
@@ -168,12 +183,14 @@ orderedMoves cfg me st maximizing = do
                     ) ms
       pure (map fst (sortByScore maximizing scored))
 
+-- Sorts scored moves in descending order for maximizing play or ascending order for minimizing play.
 sortByScore :: Bool -> [(a,Int)] -> [(a,Int)]
 sortByScore maximizing xs =
   let cmp    (_,v1) (_,v2) = compare v2 v1
       cmpMin (_,v1) (_,v2) = compare v1 v2
   in if maximizing then sortBy cmp xs else sortBy cmpMin xs
 
+--Implements a simple custom sorting function based on a comparison rule.
 sortBy :: (a -> a -> Ordering) -> [a] -> [a]
 sortBy _ [] = []
 sortBy cmp (x:xs) = sortBy cmp lesser ++ [x] ++ sortBy cmp greater
@@ -184,17 +201,20 @@ sortBy cmp (x:xs) = sortBy cmp lesser ++ [x] ++ sortBy cmp greater
 
 -- Node accounting
 
+--Extracts the search configuration from the current search environment.
 getsCfg :: State SearchEnv SearchConfig
 getsCfg = do
   env <- get
   pure (seCfg env)
 
+--Increments the node counter and reports whether the search is still within the allowed node limit.
 bumpNodeAndCheck :: SearchConfig -> State SearchEnv Bool
 bumpNodeAndCheck cfg = do
   modify (\e -> e { seNodes = seNodes e + 1 })
   exceeded <- nodeLimitExceeded cfg
   pure (not exceeded)
 
+--Checks whether the AI has already searched too many nodes.
 nodeLimitExceeded :: SearchConfig -> State SearchEnv Bool
 nodeLimitExceeded cfg =
   case nodeLimit cfg of

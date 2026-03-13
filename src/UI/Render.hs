@@ -16,6 +16,8 @@ ansiRed   = "\ESC[31m"
 ansiBlue  = "\ESC[34m"
 ansiDim   = "\ESC[2m"
 
+
+-- Builds the full text display of the current game, including the title, column labels, and the formatted board grid.
 render :: GameState -> String
 render st =
   let b = gsBoard st
@@ -57,6 +59,8 @@ render st =
 
   in unlines (title : "" : header : boardLines)
 
+
+-- Formats one board cell so its symbol is centered inside a fixed-width box.
 cellBlock :: Int -> Cell -> String
 cellBlock innerW cell =
   let sym = renderCell cell
@@ -65,6 +69,8 @@ cellBlock innerW cell =
       rightPad = innerW - visibleSymW - leftPad
   in " " ++ replicate leftPad ' ' ++ sym ++ replicate rightPad ' ' ++ " "
 
+
+-- Converts a cell’s contents into the colored symbol shown on the screen.
 renderCell :: Cell -> String
 renderCell Empty       = ansiDim  ++ "·" ++ ansiReset
 renderCell (Taken P1)  = ansiRed  ++ "X" ++ ansiReset
