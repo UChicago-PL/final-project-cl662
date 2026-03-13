@@ -1,7 +1,9 @@
--- src/UI/Input.hs
+-- src/UI/Input.hss
 module UI.Input
   ( promptPos
   , parsePos
+  , promptMNK
+  , parseMNK
   ) where
 
 import Data.Char (isSpace)
@@ -19,8 +21,6 @@ promptPos msg = do
       putStrLn "Examples: 1,2    1 2    (1,2)"
       promptPos msg
 
--- | Parse a position from user input.
--- Accepted forms: "r,c", "r c", "(r,c)", "(r, c)".
 parsePos :: String -> Either String Pos
 parsePos raw =
   let s = trim raw
@@ -36,6 +36,39 @@ parsePos raw =
                 (Just r, Just c) -> Right (r,c)
                 _ -> Left "could not parse integers"
             _ -> Left "expected two integers"
+
+--This function prompts for an mnk input for game type
+promptMNK :: (Int, Int, Int) -> IO (Int, Int, Int)
+promptMNK def = do
+  let (dm, dn, dk) = def
+  putStrLn "Enter m n k (rows cols k). Press Enter for default."
+  putStrLn ("Default: " ++ show dm ++ " " ++ show dn ++ " " ++ show dk)
+  s <- getLine
+  let t = trim s
+  if t == ""
+    then pure def
+    else case parseMNK t of
+      Right mnk -> pure mnk
+      Left err -> do
+        putStrLn ("Invalid m n k: " ++ err)
+        putStrLn "Examples: 3 3 3   |   6 7 4"
+        promptMNK def
+
+--parser helper
+parseMNK :: String -> Either String (Int, Int, Int)
+parseMNK raw =
+  let s = trim raw
+      ws = words s
+  in case ws of
+      [a,b,c] ->
+        case (readInt a, readInt b, readInt c) of
+          (Just m, Just n, Just k)
+            | m <= 0 || n <= 0 -> Left "m and n must be positive"
+            | k <= 0           -> Left "k must be positive"
+            | k > max m n      -> Left "k cannot exceed max(m,n) (no possible win lines)"
+            | otherwise        -> Right (m,n,k)
+          _ -> Left "could not parse integers"
+      _ -> Left "expected three integers"
 
 stripParens :: String -> String
 stripParens s =

@@ -74,6 +74,7 @@ library
     , containers
     , ansi-terminal
     , text
+    , mtl
 
 
 executable mnk-game
@@ -83,6 +84,7 @@ executable mnk-game
   build-depends:
       base ^>=4.18.3.0
     , mnk-game
+    , mtl
 
 test-suite mnk-game-test
   import: warnings
@@ -98,3 +100,4 @@ test-suite mnk-game-test
       base ^>=4.18.3.0
     , mnk-game
     , hspec
+    , mtl
